@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
+	<title>Tea House Cards</title>
+	<meta name="description" content="A cozy card game in a painted greenhouse tea house by the sea. Play with the regulars or with friends online. Free, in your browser.">
+	<meta name="theme-color" content="#1b1512">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="Tea House">
+	<meta property="og:title" content="Tea House Cards">
+	<meta property="og:description" content="A cozy card game in a painted greenhouse tea house by the sea.">
+	<meta property="og:image" content="icon_512.png">
+	<link rel="manifest" href="manifest.webmanifest">
+	<link rel="preload" href="loading.webp" as="image">
+	<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: #f3e7cf;
+	background-color: #1b1512;
+	overflow: hidden;
+	touch-action: none;
+	font-family: "Nunito", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+.screen {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+	box-sizing: border-box;
+	text-align: center;
+}
+
+#loading {
+	background: #1b1512 url("loading.webp") center / cover no-repeat;
+	z-index: 10;
+	transition: opacity 0.6s ease;
+}
+
+#loading::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(27, 21, 18, 0.35) 0%, rgba(27, 21, 18, 0.82) 100%);
+}
+
+#loading > * {
+	position: relative;
+}
+
+#loading.done {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#title {
+	width: min(78vw, 640px);
+	max-height: 34vh;
+	object-fit: contain;
+	filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+#bar {
+	width: min(70vw, 420px);
+	height: 10px;
+	margin-top: 4vh;
+	border-radius: 6px;
+	border: 1px solid #d6a854;
+	background: rgba(27, 21, 18, 0.6);
+	overflow: hidden;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+#bar-fill {
+	width: 0%;
+	height: 100%;
+	background: linear-gradient(90deg, #33614f, #d6a854);
+	transition: width 0.25s ease;
+}
+
+#bar.waiting #bar-fill {
+	width: 35%;
+	animation: waiting 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes waiting {
+	from { transform: translateX(-60%); }
+	to { transform: translateX(220%); }
+}
+
+#status {
+	margin-top: 1.4vh;
+	font-size: 15px;
+	letter-spacing: 0.02em;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+	min-height: 1.4em;
+}
+
+#problem {
+	display: none;
+	max-width: min(86vw, 560px);
+	margin-top: 3vh;
+	padding: 18px 22px;
+	border-radius: 14px;
+	background: rgba(243, 231, 207, 0.95);
+	color: #2b211c;
+	font-size: 16px;
+	line-height: 1.45;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+	user-select: text;
+}
+
+#problem small {
+	display: block;
+	margin-top: 8px;
+	color: #6b5a4c;
+	font-size: 12px;
+	word-break: break-word;
+}
+
+button {
+	margin-top: 14px;
+	padding: 10px 26px;
+	border: 1px solid #d6a854;
+	border-radius: 22px;
+	background: #33614f;
+	color: #f3e7cf;
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+#downloads {
+	position: absolute;
+	bottom: calc(14px + env(safe-area-inset-bottom));
+	font-size: 13px;
+	opacity: 0.85;
+}
+
+#downloads a {
+	color: #f3d79a;
+}
+
+#rotate {
+	display: none;
+	z-index: 20;
+	background: rgba(27, 21, 18, 0.94);
+	font-size: 18px;
+	line-height: 1.4;
+	padding: 24px;
+}
+
+#rotate svg {
+	width: 84px;
+	height: 84px;
+	margin-bottom: 16px;
+	animation: turn 2.2s ease-in-out infinite;
+}
+
+@keyframes turn {
+	0%, 30% { transform: rotate(0deg); }
+	60%, 100% { transform: rotate(-90deg); }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+	body:not(.portrait-ok) #rotate {
+		display: flex;
+	}
+}
+
+#rotate button {
+	background: transparent;
+	font-weight: 400;
+	font-size: 14px;
+}
+/* the typing bar: a phone's keyboard opens for this box (see teahouse.keyboard below) */
+#typing {
+	display: none;
+	position: fixed;
+	z-index: 15;
+	top: calc(10px + env(safe-area-inset-top));
+	left: 50%;
+	width: min(92vw, 560px);
+	transform: translateX(-50%);
+	box-sizing: border-box;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 8px 8px 18px;
+	border: 2px solid #d6a854;
+	border-radius: 30px;
+	background: #f3e7cf;
+	color: #2b211c;
+	box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+#typing.open {
+	display: flex;
+}
+#typing label {
+	flex: none;
+	font-size: 14px;
+	color: #6b5a4c;
+	max-width: 30%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+#typing input {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 4px;
+	border: 0;
+	border-bottom: 1px solid #d6a854;
+	background: transparent;
+	color: #2b211c;
+	font: inherit;
+	font-size: 18px;
+	outline: none;
+	-webkit-user-select: text;
+	user-select: text;
+}
+#typing input.code {
+	letter-spacing: 0.3em;
+	text-transform: uppercase;
+	font-weight: 700;
+}
+#typing button {
+	margin: 0;
+	padding: 8px 18px;
+	font-size: 15px;
+}
+	</style>
+	<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+
+</head>
+<body>
+	<canvas id="canvas">
+		Your browser does not support the canvas tag.
+	</canvas>
+
+	<noscript>
+		<div class="screen">The game needs JavaScript. / Для игры нужен JavaScript.</div>
+	</noscript>
+
+	<div id="loading" class="screen">
+		<img id="title" src="title_en.webp" alt="Tea House Cards">
+		<div id="bar" class="waiting"><div id="bar-fill"></div></div>
+		<div id="status"></div>
+		<div id="problem"></div>
+		<div id="downloads"><span data-t="download"></span> <a href="download/">Windows · Linux</a></div>
+	</div>
+
+	<div id="rotate" class="screen">
+		<svg viewBox="0 0 64 64" fill="none" stroke="#d6a854" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<rect x="20" y="6" width="24" height="52" rx="5"></rect>
+			<line x1="29" y1="50" x2="35" y2="50"></line>
+		</svg>
+		<div data-t="rotate"></div>
+		<button type="button" id="portrait-ok" data-t="anyway"></button>
+	</div>
+
+	<form id="typing" autocomplete="off">
+		<label for="typing-input" id="typing-label"></label>
+		<input id="typing-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+		<button type="button" id="typing-done" data-t="done"></button>
+	</form>
+	<script>
+// The page's side of fullscreen and of typing on a phone. The game calls these through
+// JavaScriptBridge (src/autoload/fullscreen.gd, web_keyboard.gd). Both need the tap itself: a
+// browser goes fullscreen, and a phone shows its keyboard, only from inside a tap's handler, and
+// the game only hears of the tap a frame later.
+window.teahouse = (function () {
+	const root = document.documentElement;
+	const canvas = document.getElementById('canvas');
+	const touch = () => 'ontouchstart' in window && matchMedia('(pointer: coarse)').matches;
+	const listeners = [];
+	// when the first tap went fullscreen by itself (that tap may also press the game's button)
+	let autoAt = -1e9;
+	let autoDone = false;
+	const fs = {
+		auto: true,
+		supported: () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+		standalone: () => matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches
+			|| navigator.standalone === true,
+		touch: touch,
+		isOn: () => !!(document.fullscreenElement || document.webkitFullscreenElement),
+		// the whole page, so the typing bar still shows over the game; a phone turns sideways
+		request(on) {
+			if (on === fs.isOn()) {
+				return;
+			}
+			if (!on) {
+				if (performance.now() - autoAt < 1500) {
+					return;
+				}
+				const exit = document.exitFullscreen || document.webkitExitFullscreen;
+				Promise.resolve(exit && exit.call(document)).catch(() => {});
+				return;
+			}
+			const req = root.requestFullscreen || root.webkitRequestFullscreen;
+			if (!req) {
+				return;
+			}
+			let done;
+			try {
+				done = req.call(root, { navigationUI: 'hide' });
+			} catch (e) {
+				return;
+			}
+			Promise.resolve(done).then(() => {
+				if (touch() && screen.orientation && screen.orientation.lock) {
+					screen.orientation.lock('landscape').catch(() => {});
+				}
+			}, () => {});
+		},
+		listen(cb) {
+			listeners.push(cb);
+		},
+	};
+	const changed = () => listeners.forEach((cb) => cb(fs.isOn()));
+	document.addEventListener('fullscreenchange', changed);
+	document.addEventListener('webkitfullscreenchange', changed);
+
+	// the typing bar: the game sends where its text fields are (window pixels); a tap on one opens
+	// the bar for it, focused in that same tap, and what's typed goes back to the game
+	const bar = document.getElementById('typing');
+	const input = document.getElementById('typing-input');
+	const label = document.getElementById('typing-label');
+	let fields = [];
+	let active = null;
+	let game = null;
+	function fieldAt(x, y) {
+		const r = canvas.getBoundingClientRect();
+		if (r.width <= 0 || r.height <= 0) {
+			return null;
+		}
+		const px = (x - r.left) * canvas.width / r.width;
+		const py = (y - r.top) * canvas.height / r.height;
+		return fields.find((f) => px >= f.x && px <= f.x + f.w && py >= f.y && py <= f.y + f.h) || null;
+	}
+	// While the bar is open, the game can't take the focus back: Godot focuses its canvas on every
+	// touch and when a field lets go, and its hidden IME box re-focuses itself every 100 ms while a
+	// field has focus. Each would close the phone's keyboard.
+	const noFocus = () => {};
+	function hold(on) {
+		for (const el of [canvas, document.querySelector('div.ime')]) {
+			if (!el) {
+				continue;
+			}
+			if (on) {
+				el.focus = noFocus;
+			} else {
+				delete el.focus;
+			}
+		}
+	}
+	function open(f) {
+		active = f.id;
+		hold(true);
+		const code = f.kind === 'code';
+		input.className = code ? 'code' : '';
+		input.maxLength = f.max > 0 ? f.max : 524288;
+		input.setAttribute('autocapitalize', code ? 'characters' : 'words');
+		input.setAttribute('enterkeyhint', code ? 'go' : 'done');
+		input.value = f.value;
+		label.textContent = f.label;
+		label.style.display = f.label ? '' : 'none';
+		bar.classList.add('open');
+		input.focus();
+		try {
+			input.setSelectionRange(input.value.length, input.value.length);
+		} catch (e) {
+			// some input types have no selection
+		}
+		if (game) {
+			game.open(f.id);
+		}
+	}
+	function close(tell) {
+		if (active === null) {
+			return;
+		}
+		active = null;
+		bar.classList.remove('open');
+		input.blur();
+		hold(false);
+		canvas.focus();
+		window.scrollTo(0, 0);
+		if (tell && game) {
+			game.close(0);
+		}
+	}
+	const keyboard = {
+		attach(onOpen, onInput, onSubmit, onClose) {
+			game = { open: onOpen, input: onInput, submit: onSubmit, close: onClose };
+		},
+		setFields(json) {
+			fields = JSON.parse(json);
+			// the screen changed under the bar
+			if (active !== null && !fields.some((f) => f.id === active)) {
+				close(false);
+			}
+		},
+		isOpen: () => active !== null,
+	};
+	input.addEventListener('input', () => {
+		if (active !== null && game) {
+			game.input(active, input.value);
+		}
+	});
+	bar.addEventListener('submit', (e) => {
+		e.preventDefault();
+		if (active !== null && game) {
+			game.submit(active);
+		}
+		close(true);
+	});
+	document.getElementById('typing-done').addEventListener('click', () => close(true));
+	// the keyboard's own Done (iOS) or a tap on the bar's button
+	input.addEventListener('blur', () => close(true));
+	if (window.visualViewport) {
+		const follow = () => {
+			bar.style.transform = 'translate(-50%, ' + Math.max(0, visualViewport.offsetTop) + 'px)';
+		};
+		visualViewport.addEventListener('resize', follow);
+		visualViewport.addEventListener('scroll', follow);
+	}
+	// before the game's own touch handlers, inside the tap
+	window.addEventListener('touchend', (e) => {
+		if (e.target !== canvas || e.changedTouches.length !== 1) {
+			return;
+		}
+		const t = e.changedTouches[0];
+		const f = fieldAt(t.clientX, t.clientY);
+		if (f) {
+			open(f);
+			return;
+		}
+		// a tap anywhere else in the game puts the keyboard away
+		close(true);
+		if (fs.auto && !autoDone && touch() && fs.supported() && !fs.isOn() && !fs.standalone()) {
+			autoDone = true;
+			autoAt = performance.now();
+			fs.request(true);
+		}
+	}, true);
+	return { fs: fs, keyboard: keyboard };
+}());
+	</script>
+	<!-- how this site plays online ("server" or "p2p"), written by the deploy script -->
+	<script src="online.js"></script>
+	<script src="index.js"></script>
+	<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":44918448,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_THREADS_ENABLED = false;
+
+(function () {
+	const WORDS = {
+		en: {
+			brewing: 'Brewing the tea…',
+			loading: 'Brewing the tea… %1 of %2 MB',
+			starting: 'Setting the table…',
+			download: 'Play on your computer:',
+			rotate: 'Turn your phone sideways to play.',
+			anyway: 'Play like this',
+			unsupported: 'This browser can’t start the game. Try the latest Chrome, Firefox, Safari or Edge, or download the game for your computer.',
+			failed: 'The game didn’t load. Check your connection and try again.',
+			retry: 'Try again',
+			done: 'Done',
+		},
+		ru: {
+			brewing: 'Завариваем чай…',
+			loading: 'Завариваем чай… %1 из %2 МБ',
+			starting: 'Накрываем на стол…',
+			download: 'Игра для компьютера:',
+			rotate: 'Поверните телефон боком, чтобы играть.',
+			anyway: 'Играть так',
+			unsupported: 'Этот браузер не может запустить игру. Попробуйте свежий Chrome, Firefox, Safari или Edge или скачайте игру для компьютера.',
+			failed: 'Игра не загрузилась. Проверьте подключение и попробуйте ещё раз.',
+			retry: 'Попробовать снова',
+			done: 'Готово',
+		},
+	};
+	const lang = (navigator.languages || [navigator.language || 'en'])
+		.map((l) => String(l).slice(0, 2).toLowerCase())
+		.find((l) => l in WORDS) || 'en';
+	const t = WORDS[lang];
+	document.documentElement.lang = lang;
+	document.getElementById('title').src = 'title_' + lang + '.webp';
+	document.querySelectorAll('[data-t]').forEach((el) => {
+		el.textContent = t[el.dataset.t];
+	});
+	document.getElementById('portrait-ok').addEventListener('click', () => {
+		document.body.classList.add('portrait-ok');
+	});
+
+	const loading = document.getElementById('loading');
+	const bar = document.getElementById('bar');
+	const fill = document.getElementById('bar-fill');
+	const status = document.getElementById('status');
+	const problem = document.getElementById('problem');
+	status.textContent = t.brewing;
+
+	function showProblem(text, detail, canRetry) {
+		bar.style.display = 'none';
+		status.textContent = '';
+		problem.textContent = text;
+		if (detail) {
+			const small = document.createElement('small');
+			small.textContent = detail;
+			problem.appendChild(small);
+		}
+		if (canRetry) {
+			const again = document.createElement('button');
+			again.type = 'button';
+			again.textContent = t.retry;
+			again.addEventListener('click', () => window.location.reload());
+			problem.appendChild(document.createElement('br'));
+			problem.appendChild(again);
+		}
+		problem.style.display = 'block';
+	}
+
+	const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+	if (missing.length !== 0) {
+		showProblem(t.unsupported, missing.join(', '), false);
+		return;
+	}
+
+	const mb = (bytes) => (bytes / 1048576).toFixed(0);
+	const engine = new Engine(GODOT_CONFIG);
+	engine.startGame({
+		onProgress: function (current, total) {
+			if (current > 0 && total > 0) {
+				bar.classList.remove('waiting');
+				fill.style.width = Math.min(100, (100 * current) / total).toFixed(1) + '%';
+				status.textContent = current >= total ? t.starting
+					: t.loading.replace('%1', mb(current)).replace('%2', mb(total));
+			}
+		},
+	}).then(() => {
+		loading.classList.add('done');
+		setTimeout(() => loading.remove(), 700);
+	}, (err) => {
+		console.error(err);
+		showProblem(t.failed, err instanceof Error ? err.message : String(err || ''), true);
+	});
+}());
+	</script>
+</body>
+</html>
+

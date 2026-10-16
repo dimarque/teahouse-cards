@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Tea House Cards: download</title>
+	<meta name="theme-color" content="#1b1512">
+	<link rel="icon" href="icon_192.png">
+	<style>
+body {
+	margin: 0;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 24px 16px;
+	box-sizing: border-box;
+	background: #1b1512 url("../loading.webp") center / cover fixed;
+	color: #2b211c;
+	font-family: "Nunito", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+img.title {
+	width: min(86vw, 520px);
+	filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+.card {
+	max-width: 520px;
+	width: 100%;
+	box-sizing: border-box;
+	margin-top: 18px;
+	padding: 22px 24px;
+	border-radius: 16px;
+	border: 1px solid #d6a854;
+	background: rgba(243, 231, 207, 0.96);
+	box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+	line-height: 1.5;
+}
+
+h1 {
+	margin: 0 0 6px;
+	font-size: 20px;
+}
+
+a.get {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin: 12px 0;
+	padding: 12px 18px;
+	border-radius: 24px;
+	border: 1px solid #d6a854;
+	background: #33614f;
+	color: #f3e7cf;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+a.get span {
+	font-weight: 400;
+	opacity: 0.8;
+	font-size: 14px;
+}
+
+p.note {
+	margin: 8px 0 0;
+	font-size: 14px;
+	color: #5a4a3e;
+}
+
+a.back {
+	display: inline-block;
+	margin-top: 14px;
+	color: #33614f;
+	font-weight: 700;
+}
+	</style>
+</head>
+<body>
+	<img class="title" id="title" src="title_en.webp" alt="Tea House Cards">
+	<div class="card">
+		<h1 data-t="heading"></h1>
+		<a class="get" href="TeaHouseCards-1.2.0-windows.zip">Windows <span>80 MB</span></a>
+		<a class="get" href="TeaHouseCards-1.2.0-linux.zip">Linux <span>71 MB</span></a>
+		<p class="note" data-t="windows"></p>
+		<p class="note" data-t="linux"></p>
+		<a class="back" href="../" data-t="back"></a>
+	</div>
+	<script>
+(function () {
+	const WORDS = {
+		en: {
+			heading: 'Tea House Cards 1.2.0 for your computer',
+			windows: 'Windows: unzip and run TeaHouseCards.exe (keep the files together). Windows may warn about an unknown app: choose “More info”, then “Run anyway”.',
+			linux: 'Linux: unzip, then run TeaHouseCards.x86_64 (or mark it executable first). Keep the files together.',
+			back: '← Play in the browser',
+		},
+		ru: {
+			heading: 'Чайный домик 1.2.0 для компьютера',
+			windows: 'Windows: распакуйте архив и запустите TeaHouseCards.exe (файлы должны лежать рядом). Если Windows предупредит о неизвестном приложении, нажмите «Подробнее», затем «Выполнить в любом случае».',
+			linux: 'Linux: распакуйте архив и запустите TeaHouseCards.x86_64 (при необходимости сделайте файл исполняемым). Файлы должны лежать рядом.',
+			back: '← Играть в браузере',
+		},
+	};
+	const lang = (navigator.languages || [navigator.language || 'en'])
+		.map((l) => String(l).slice(0, 2).toLowerCase())
+		.find((l) => l in WORDS) || 'en';
+	document.documentElement.lang = lang;
+	document.getElementById('title').src = 'title_' + lang + '.webp';
+	document.title = lang === 'ru' ? 'Чайный домик: скачать' : 'Tea House Cards: download';
+	document.querySelectorAll('[data-t]').forEach((el) => {
+		el.textContent = WORDS[lang][el.dataset.t];
+	});
+}());
+	</script>
+</body>
+</html>
